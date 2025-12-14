@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Processor</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; }
+        h1 { color: white; text-align: center; margin-bottom: 30px; text-shadow: 2px 2px 4px rgba(0,0,0,0.2); }
+        .card { background: white; border-radius: 16px; padding: 30px; margin-bottom: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+        .upload-zone { border: 3px dashed #667eea; border-radius: 12px; padding: 40px; text-align: center; cursor: pointer; transition: all 0.3s; }
+        .upload-zone:hover, .upload-zone.dragover { border-color: #764ba2; background: #f8f7ff; }
+        .upload-zone input { display: none; }
+        .upload-icon { font-size: 48px; margin-bottom: 15px; }
+        .btn { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 12px 30px; border-radius: 8px; cursor: pointer; font-size: 16px; transition: transform 0.2s, box-shadow 0.2s; }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        .preview { max-width: 100%; max-height: 300px; border-radius: 8px; margin: 20px 0; }
+        .results { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-top: 20px; }
+        .result-item { background: #f8f7ff; border-radius: 8px; padding: 15px; text-align: center; }
+        .result-item img { max-width: 100%; border-radius: 4px; margin-bottom: 10px; }
+        .result-item a { color: #667eea; text-decoration: none; font-size: 14px; word-break: break-all; }
+        .status { padding: 15px; border-radius: 8px; margin: 15px 0; }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .status.loading { background: #cce5ff; color: #004085; }
+        .config { margin-bottom: 20px; }
+        .config input { width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; }
+        .config input:focus { outline: none; border-color: #667eea; }
+        .config label { display: block; margin-bottom: 8px; font-weight: 600; color: #333; }
+        .exif-data { background: #f8f9fa; border-radius: 8px; padding: 15px; margin-top: 15px; font-size: 13px; }
+        .exif-data h4 { margin-bottom: 10px; color: #667eea; }
+        .exif-item { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #eee; }
+        .spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid #fff; border-radius: 50%; border-top-color: transparent; animation: spin 1s linear infinite; margin-right: 10px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🖼️ Image Processor</h1>
+        
+        <div class="card">
+            <div class="config">
+                <label for="apiUrl">API Gateway URL:</label>
+                <input type="text" id="apiUrl" placeholder="https://xxxxx.execute-api.region.amazonaws.com/dev/upload">
+            </div>
+            <div class="config">
+                <label for="cdnUrl">CloudFront URL (optional):</label>
+                <input type="text" id="cdnUrl" placeholder="https://xxxxx.cloudfront.net">
+            </div>
+        </div>
+
+        <div class="card">
+            <h2 style="margin-bottom: 20px;">Upload Image</h2>
+            <div class="upload-zone" id="dropZone">
+                <div class="upload-icon">📤</div>
+                <p style="margin-bottom: 15px;">Drag & drop an image here, or click to select</p>
+                <input type="file" id="fileInput" accept="image/*">
+                <button class="btn" onclick="document.getElementById('fileInput').click()">Select Image</button>
+            </div>
+            <img id="preview" class="preview" style="display: none;">
+            <div id="status"></div>
+            <button class="btn" id="uploadBtn" style="display: none; margin-top: 15px;" onclick="uploadImage()">
+                Process Image
+            </button>
+        </div>
+
+        <div class="card" id="resultsCard" style="display: none;">
+            <h2>Processed Images</h2>
+            <div class="results" id="results"></div>
+            <div class="exif-data" id="exifData" style="display: none;">
+                <h4>📷 EXIF Metadata</h4>
+                <div id="exifContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const preview = document.getElementById('preview');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const statusDiv = document.getElementById('status');
+        let selectedFile = null;
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(e => {
+            dropZone.addEventListener(e, ev => { ev.preventDefault(); ev.stopPropagation(); });
+        });
+        ['dragenter', 'dragover'].forEach(e => dropZone.addEventListener(e, () => dropZone.classList.add('dragover')));
+        ['dragleave', 'drop'].forEach(e => dropZone.addEventListener(e, () => dropZone.classList.remove('dragover')));
+
+        dropZone.addEventListener('drop', e => handleFile(e.dataTransfer.files[0]));
+        fileInput.addEventListener('change', e => handleFile(e.target.files[0]));
+
+        function handleFile(file) {
+            if (!file || !file.type.startsWith('image/')) {
+                showStatus('Please select a valid image file', 'error');
+                return;
+            }
+            selectedFile = file;
+            const reader = new FileReader();
+            reader.onload = e => {
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+                uploadBtn.style.display = 'inline-block';
+                showStatus(`Selected: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`, 'success');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function showStatus(msg, type) {
+            statusDiv.innerHTML = `<div class="status ${type}">${type === 'loading' ? '<span class="spinner"></span>' : ''}${msg}</div>`;
+        }
+
+        async function uploadImage() {
+            const apiUrl = document.getElementById('apiUrl').value.trim();
+            if (!apiUrl) { showStatus('Please enter the API Gateway URL', 'error'); return; }
+            if (!selectedFile) { showStatus('Please select an image first', 'error'); return; }
+
+            uploadBtn.disabled = true;
+            showStatus('Processing image...', 'loading');
+
+            try {
+                const base64 = await toBase64(selectedFile);
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image: base64.split(',')[1] })
+                });
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showStatus(`✅ Successfully processed ${data.processed_images?.length || 0} variants!`, 'success');
+                    displayResults(data);
+                } else {
+                    showStatus(`Error: ${data.error || 'Unknown error'}`, 'error');
+                }
+            } catch (err) {
+                showStatus(`Error: ${err.message}`, 'error');
+            } finally {
+                uploadBtn.disabled = false;
+            }
+        }
+
+        function toBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function displayResults(data) {
+            const resultsCard = document.getElementById('resultsCard');
+            const resultsDiv = document.getElementById('results');
+            const cdnUrl = document.getElementById('cdnUrl').value.trim();
+            
+            resultsCard.style.display = 'block';
+            resultsDiv.innerHTML = data.processed_images?.map(img => {
+                const url = cdnUrl ? `${cdnUrl}/${img.key}` : `#${img.key}`;
+                return `<div class="result-item"><div>📄 ${img.format}</div><a href="${url}" target="_blank">${img.key}</a></div>`;
+            }).join('') || '<p>No results</p>';
+
+            // Display EXIF data if available
+            if (data.processed_images?.[0]?.exif && Object.keys(data.processed_images[0].exif).length > 0) {
+                const exifDiv = document.getElementById('exifData');
+                const exifContent = document.getElementById('exifContent');
+                exifDiv.style.display = 'block';
+                exifContent.innerHTML = Object.entries(data.processed_images[0].exif)
+                    .slice(0, 15)
+                    .map(([k, v]) => `<div class="exif-item"><span>${k}</span><span>${v}</span></div>`)
+                    .join('');
+            }
+        }
+    </script>
+</body>
+</html>
+
