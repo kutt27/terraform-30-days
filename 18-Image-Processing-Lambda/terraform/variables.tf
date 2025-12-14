@@ -33,3 +33,27 @@ variable "allowed_origins" {
   type        = list(string)
   default     = ["*"]
 }
+
+variable "watermark_text" {
+  description = "Text to use for image watermark"
+  type        = string
+  default     = "Image Processor"
+}
+
+variable "watermark_enabled" {
+  description = "Whether to enable watermarking"
+  type        = string
+  default     = "true"
+}
+
+variable "watermark_opacity" {
+  description = "Watermark opacity (0-255)"
+  type        = string
+  default     = "128"
+}
+
+variable "notification_email" {
+  description = "Email address for SNS notifications (optional)"
+  type        = string
+  default     = ""
+}
