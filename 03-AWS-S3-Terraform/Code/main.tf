@@ -13,7 +13,7 @@ provider "aws" {
 
 # create a s3 bucket
 resource "aws_s3_bucket" "first_s3_bucket" {
-  bucket = "amal-s3-bucket-terraform30days" # name of the bucket, unique one
+  bucket = "amal-s3-bucket-terraform30days-123" # name of the bucket, unique one
 
   tags = {
     Name        = "My bucket 2.0"
