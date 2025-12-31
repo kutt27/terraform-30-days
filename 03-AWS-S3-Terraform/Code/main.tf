@@ -20,13 +20,3 @@ resource "aws_s3_bucket" "first_s3_bucket" {
     Environment = "Dev"
   }
 }
-
-# create second s3 bucket
-resource "aws_s3_bucket" "first_s3_bucket-1" {
-  bucket = "amal-s3-bucket-terraform30days-124" # name of the bucket, unique one
-
-  tags = {
-    Name        = "My bucket 2.0.1"
-    Environment = "test"
-  }
-}
