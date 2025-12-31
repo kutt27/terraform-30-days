@@ -22,7 +22,7 @@ resource "aws_s3_bucket" "first_s3_bucket" {
 }
 
 # create second s3 bucket
-resource "aws_s3_bucket" "first_s3_bucket" {
+resource "aws_s3_bucket" "first_s3_bucket-1" {
   bucket = "amal-s3-bucket-terraform30days-124" # name of the bucket, unique one
 
   tags = {
