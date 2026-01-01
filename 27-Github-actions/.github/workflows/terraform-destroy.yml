@@ -30,6 +30,7 @@ jobs:
     defaults:
       run:
         shell: bash
+        working-directory: Code
 
     steps:
       - name: Checkout
