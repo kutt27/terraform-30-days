@@ -30,7 +30,7 @@ jobs:
     defaults:
       run:
         shell: bash
-        working-directory: Code
+        working-directory: 27-Github-actions/Code
 
     steps:
       - name: Checkout

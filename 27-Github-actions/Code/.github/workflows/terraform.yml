@@ -7,13 +7,15 @@ on:
       - test
       - dev
     paths:
-      - 'Code/**'
+      - '27-Github-actions/Code/**'
 
   pull_request:
     branches:
       - main
       - test
       - dev
+    paths:
+      - '27-Github-actions/Code/**'
 
 env:
   TF_LOG: INFO
@@ -35,7 +37,7 @@ jobs:
     defaults:
       run:
         shell: bash
-        working-directory: Code
+        working-directory: 27-Github-actions/Code
 
     steps:
       - name: Checkout
@@ -154,7 +156,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: tfplan-${{ env.WORKSPACE_NAME }}
-          path: Code/tfplan
+          path: 27-Github-actions/Code/tfplan
 
   terraform-apply:
     name: "Terraform Apply"
@@ -165,7 +167,7 @@ jobs:
     defaults:
       run:
         shell: bash
-        working-directory: Code
+        working-directory: 27-Github-actions/Code
 
     steps:
       - name: Checkout
@@ -202,7 +204,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: tfplan-${{ env.WORKSPACE_NAME }}
-          path: Code
+          path: 27-Github-actions/Code
 
       - name: Terraform Apply
         run: terraform apply -auto-approve -input=false tfplan
