@@ -2,5 +2,5 @@ environment      = "dev"
 instance_type    = "t2.micro"
 desired_capacity = 2
 min_size         = 1
-max_size         = 2
+max_size         = 1
 vpc_cidr         = "10.0.0.0/16"
